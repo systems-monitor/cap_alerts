@@ -25,6 +25,7 @@ issues an entry's config owes, and the reload rules when options change.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -38,6 +39,8 @@ from .const import (
     DOMAIN,
     PLATFORMS,
     USER_AGENT,
+    USER_AGENT_TOKEN_LENGTH,
+    USER_AGENT_TOKEN_SALT,
 )
 from .coordinator import AlertsDataUpdateCoordinator
 from .flows.common import compute_scope_key
@@ -83,6 +86,15 @@ def _async_ensure_scope_key(hass: HomeAssistant, entry: ConfigEntry) -> None:
         return
     hass.config_entries.async_update_entry(entry, unique_id=key)
 
+def user_agent_for(instance_id: str) -> str:
+    """Build the User-Agent sent to every provider.
+
+    The token is a truncated salted SHA-256 of the HA instance ID: the same
+    install always sends the same token, two installs never share one, and the
+    UUID itself never leaves the machine.
+    """
+    digest = hashlib.sha256((USER_AGENT_TOKEN_SALT + instance_id).encode()).hexdigest()
+    return USER_AGENT.format(digest[:USER_AGENT_TOKEN_LENGTH])
 
 async def async_setup_entry(hass: HomeAssistant, entry: CAPAlertsConfigEntry) -> bool:
     """Set up CAP Alerts from a config entry."""
@@ -92,7 +104,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: CAPAlertsConfigEntry) ->
     # will say why, so it must not wait on a successful setup (issue #163).
     async_sync_issues(hass, entry)
     instance_id = await async_get_instance_id(hass)
-    user_agent = USER_AGENT.format(instance_id)
+    user_agent = user_agent_for(instance_id)
 
     domain_data = hass.data.setdefault(DOMAIN, {})
     if "geometry_store" not in domain_data:
