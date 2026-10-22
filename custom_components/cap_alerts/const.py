@@ -28,8 +28,18 @@ EVENT_INCIDENT_REMOVED = "incident_removed"
 REMOVAL_REASON_SUPERSEDED = "superseded"
 REMOVAL_REASON_ENDED = "ended"
 
-# User-Agent for API requests — {0} is replaced with the HA instance ID
-USER_AGENT = "HomeAssistant-CAPAlerts/{0}"
+# User-Agent for API requests. {0} is a short token derived from the HA instance ID
+# (see ``user_agent_for`` in __init__.py): stable per install, so one abusive install
+# cannot get every install blocked, which is why a constant string was never used;
+# but not the UUID core hands to analytics and cloud, so no provider learns a value
+# used anywhere else. The project URL is the contact NWS's API FAQ asks for.
+USER_AGENT = "HomeAssistant-CAPAlerts/{0} (+https://github.com/seevee/cap_alerts)"
+# Hex characters of SHA-256 kept as the token: 48 bits, no realistic collision
+# between installs, and short enough to read in a provider's log.
+USER_AGENT_TOKEN_LENGTH = 12
+# Salt so the token cannot be matched to the UUID by anyone who holds the UUID
+# from another service and hashes it.
+USER_AGENT_TOKEN_SALT = "cap_alerts:"
 
 # Home Assistant's two "no home set" sentinels, for GPS prefill (issue #128).
 #
